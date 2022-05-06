@@ -7,11 +7,12 @@ import scala.io._
 
 object TrendingNer extends App {
 
-  val url = "https://www.chicagotribune.com/arcio/rss/category/sports/" +
-            "?query=display_date:[now-2d+TO+now]&sort=display_date:desc"
+  // val url = "https://www.chicagotribune.com/arcio/rss/category/sports/" +
+  //           "?query=display_date:[now-2d+TO+now]&sort=display_date:desc"
 
+  val url = "https://www.reddit.com/r/Android/hot/.json?count=10"
   val request = new FeedRequester(url)
-  val articlesContent = request.parserContent()
+  val articlesContent = request.parserContentJSON()
 
   val model = new NERModel
   val extractedNEs: Seq[Seq[String]] = model.getNEs(articlesContent)

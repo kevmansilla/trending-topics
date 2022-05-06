@@ -5,26 +5,48 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import scala.io._
 
+case class Subscription(
+  url: String,
+  urlParams: List[String],
+  urlType: String
+)
+
 object TrendingNer extends App {
 
-  // val url = "https://www.chicagotribune.com/arcio/rss/category/sports/" +
-  //           "?query=display_date:[now-2d+TO+now]&sort=display_date:desc"
+  implicit val formats = DefaultFormats
 
-  val url = "https://www.reddit.com/r/Android/hot/.json?count=10"
-  val request = new FeedRequester(url)
-  val articlesContent = request.parserContentJSON()
+  val jsonContent = Source.fromFile("subscriptions.json")
+  val subscriptions = (parse(jsonContent.mkString)).extract[List[Subscription]]
+  
+  var articlesContent: Seq[String] = Seq[String]()
+  subscriptions.foreach {
+    subs => {
+      val request = subs.urlType match {
+        case "rss" => new parserXML
+        case "reddit" => new parserJSON
+      }
+
+      subs.urlParams.foreach {
+        param => {
+          var correctURL = subs.url.replace("%s", param) 
+          val content = request.parserRequest(correctURL)
+          articlesContent = articlesContent ++ content
+        }
+      }
+    }
+  }
 
   val model = new NERModel
   val extractedNEs: Seq[Seq[String]] = model.getNEs(articlesContent)
 
-  // (articlesContent zip extractedNEs).foreach {
-  //   case (article, namedEntities) => {
-  //     println("*********************************")
-  //     println(article)
-  //     println(namedEntities)
-  //     println("*********************************")
-  //   }
-  // }
+  (articlesContent zip extractedNEs).foreach {
+    case (article, namedEntities) => {
+      println("*********************************")
+      println(article)
+      println(namedEntities)
+      println("*********************************")
+    }
+  }
 
 
   // ****************** COUNT AND SORT THE ENTITIES ************************

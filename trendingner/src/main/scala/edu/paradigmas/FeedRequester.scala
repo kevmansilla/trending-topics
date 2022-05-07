@@ -18,12 +18,13 @@ abstract class FeedRequester {
   def parserRequest(url: String): Seq[String]
 }
 
-
 class parserXML extends FeedRequester {
   def parserRequest(url: String): Seq[String] = {
     val xmlString = getRequest(url).body 
     val xml = XML.loadString(xmlString)
-    (xml \\ "item").map {item => ((item \ "title").text + " " + (item \ "description").text)}
+    val conent = (xml \\ "item").map {item => ((item \ "title").text + " " + (item \ "description").text)}
+    // replaceAllIn es un metodo de expresiones regulares, que dado un texto si encuentra alguna expresion la remplaza.
+    conent.map(x => word.replaceAllIn(x, ""))
   }
 }
 
@@ -32,12 +33,11 @@ class parserJSON extends FeedRequester {
   implicit val formats = DefaultFormats
   
   def parserRequest(url: String): Seq[String] = {
-    
     val response = getRequest(url).body
-
     val result = (parse(response) \ "data" \ "children" \ "data").extract[List[Map[String, Any]]] 
-
-    result.map(x => x.get("title").getOrElse("").toString + x.get("selftext").getOrElse("").toString).toSeq
-                    .map(x => word replaceAllIn(x, ""))
+    result.map (x =>
+      x.get("title").getOrElse("").toString + 
+      x.get("selftext").getOrElse("").toString 
+    .toSeq).map(x => word.replaceAllIn(x, ""))
   }
 }

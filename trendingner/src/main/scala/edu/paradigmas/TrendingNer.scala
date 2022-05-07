@@ -11,42 +11,50 @@ case class Subscription(
   urlType: String
 )
 
+case class processSub(
+  url: String,
+  request: FeedRequester
+)
+
 object TrendingNer extends App {
 
   implicit val formats = DefaultFormats
 
   val jsonContent = Source.fromFile("subscriptions.json")
   val subscriptions = (parse(jsonContent.mkString)).extract[List[Subscription]]
-  
-  var articlesContent: Seq[String] = Seq[String]()
-  subscriptions.foreach {
-    subs => {
-      val request = subs.urlType match {
-        case "rss" => new parserXML
-        case "reddit" => new parserJSON
-      }
 
-      subs.urlParams.foreach {
-        param => {
-          var correctURL = subs.url.replace("%s", param) 
-          val content = request.parserRequest(correctURL)
-          articlesContent = articlesContent ++ content
-        }
-      }
+  def getCorrectReq(urltype: String) = {
+    urltype match {
+      case "rss" => new parserXML
+      case "reddit" => new parserJSON
     }
   }
+
+  val correctsURL = subscriptions.map { subs => 
+    if(subs.urlParams.length != 0) {
+      subs.urlParams.map { p =>
+        processSub(subs.url.replace("%s", p), getCorrectReq(subs.urlType))
+      }
+    } else {
+      List(processSub(subs.url, getCorrectReq(subs.urlType)))
+    }
+  }.flatten
+
+  val articlesContent = correctsURL.map { r =>
+    r.request.parserRequest(r.url)
+  }.flatten
 
   val model = new NERModel
   val extractedNEs: Seq[Seq[String]] = model.getNEs(articlesContent)
 
-  (articlesContent zip extractedNEs).foreach {
-    case (article, namedEntities) => {
-      println("*********************************")
-      println(article)
-      println(namedEntities)
-      println("*********************************")
-    }
-  }
+  // (articlesContent zip extractedNEs).foreach {
+  //   case (article, namedEntities) => {
+  //     println("*********************************")
+  //     println(article)
+  //     println(namedEntities)
+  //     println("*********************************")
+  //   }
+  // }
 
 
   // ****************** COUNT AND SORT THE ENTITIES ************************

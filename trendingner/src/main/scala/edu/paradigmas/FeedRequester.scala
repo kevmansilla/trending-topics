@@ -9,35 +9,52 @@ import org.json4s.jackson.JsonMethods._
 
 abstract class FeedRequester {
 
-  val word = "(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]".r
-  
-  def getRequest(url: String): HttpResponse[String] = {
-    Http(url).timeout(connTimeoutMs = 2000, readTimeoutMs = 5000).asString
+  def getRequest(url: String): String = {
+    val CONN_TIMEOUT = 2000
+    val READ_TIMEOUT = 5000
+    Http(url).timeout(connTimeoutMs = CONN_TIMEOUT, readTimeoutMs = READ_TIMEOUT).asString.body
+  }
+
+  def cleanContent(texts: Seq[String]): Seq[String] = {
+    val word = "(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]".r
+    val correctContent: Seq[String] = texts.map(content => word.replaceAllIn(content, " "))
+    correctContent
   }
 
   def parserRequest(url: String): Seq[String]
 }
 
 class parserXML extends FeedRequester {
+
   def parserRequest(url: String): Seq[String] = {
-    val xmlString = getRequest(url).body 
-    val xml = XML.loadString(xmlString)
-    val conent = (xml \\ "item").map {item => ((item \ "title").text + " " + (item \ "description").text)}
-    // replaceAllIn es un metodo de expresiones regulares, que dado un texto si encuentra alguna expresion la remplaza.
-    conent.map(x => word.replaceAllIn(x, ""))
+    try {
+      val xmlRequest = getRequest(url)
+      val xmlContent = XML.loadString(xmlRequest)
+      val texts = (xmlContent \\ "item").map {item =>
+        (item \ "title").text + " " + (item \ "description").text
+      }
+      cleanContent(texts)
+    }
+    catch {
+      case e: Exception => List()
+    }
   }
 }
 
 class parserJSON extends FeedRequester {
-  
-  implicit val formats = DefaultFormats
-  
+
   def parserRequest(url: String): Seq[String] = {
-    val response = getRequest(url).body
-    val result = (parse(response) \ "data" \ "children" \ "data").extract[List[Map[String, Any]]] 
-    result.map (x =>
-      x.get("title").getOrElse("").toString + 
-      x.get("selftext").getOrElse("").toString 
-    .toSeq).map(x => word.replaceAllIn(x, ""))
+    try {
+      implicit val formats = DefaultFormats
+      val jsonRequest = getRequest(url)
+      val jsonContent = (parse(jsonRequest) \ "data" \ "children" \ "data").extract[List[Map[String, Any]]]
+      val texts = jsonContent.map { item =>
+        item.get("title").getOrElse("").toString + " " + item.get("selftext").getOrElse("").toString
+      }
+      cleanContent(texts)
+    }
+    catch {
+      case e: Exception => List()
+    }
   }
 }

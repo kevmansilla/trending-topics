@@ -5,44 +5,15 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import scala.io._
 
-case class Subscription(
-  url: String,
-  urlParams: List[String],
-  urlType: String
-)
-
-case class processSub(
-  url: String,
-  request: FeedRequester
-)
-
 object TrendingNer extends App {
 
   implicit val formats = DefaultFormats
 
-  val jsonContent = Source.fromFile("subscriptions.json")
-  val subscriptions = (parse(jsonContent.mkString)).extract[List[Subscription]]
+  val subsFile = Source.fromFile("subscriptions.json")
+  val subscriptions = (parse(subsFile.mkString)).extract[List[Subscription]]
 
-  def getCorrectReq(urltype: String) = {
-    urltype match {
-      case "rss" => new parserXML
-      case "reddit" => new parserJSON
-    }
-  }
-
-  val correctsURL = subscriptions.map { subs => 
-    if(subs.urlParams.length != 0) {
-      subs.urlParams.map { p =>
-        processSub(subs.url.replace("%s", p), getCorrectReq(subs.urlType))
-      }
-    } else {
-      List(processSub(subs.url, getCorrectReq(subs.urlType)))
-    }
-  }.flatten
-
-  val articlesContent = correctsURL.map { r =>
-    r.request.parserRequest(r.url)
-  }.flatten
+  val processedSubscriptions = new ProcessAllSubscription
+  val articlesContent = processedSubscriptions.processAll(subscriptions)
 
   val model = new NERModel
   val extractedNEs: Seq[Seq[String]] = model.getNEs(articlesContent)
@@ -65,10 +36,16 @@ object TrendingNer extends App {
   val sortedNEs: List[(String, Int)] = neCounts.toList
     .sortBy(_._2)(Ordering[Int].reverse)
 
-  sortedNEs.foreach {
+  println("\nThe 20 Most Named Entities: ")
+  println("---------------------------\n")
+
+  val INIT_INDEX = 0
+  val MAX_FEEDS = 50
+  sortedNEs.slice(INIT_INDEX, MAX_FEEDS).foreach {
     case (namedEntity, count) => {
-      println(s"$namedEntity : $count")
+      println(s"- $namedEntity: $count")
     }
   }
+  println("\n")
 
 }

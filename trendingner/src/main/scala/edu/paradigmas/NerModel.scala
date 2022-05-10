@@ -28,13 +28,13 @@ class NERModel {
     "hi", "hello"
   )
 
-  val punctuationSymbols = ".,()!?;:'`´\n" + "’”"
+  val punctuationSymbols = ".,()!?;:'`\n" //+ "’”*/&#-"
   val punctuationRegex = "\\" + punctuationSymbols.split("").mkString("|\\")
 
   // This is the model that extracts the Named Entities from a single text
   def getNEsSingle(text: String): Seq[String] =
-    text.replaceAll(punctuationRegex, "").split(" ")
-    .filter { word:String => word.length > 1 &&
+    text.replaceAll(punctuationRegex, " ").split(" ")
+    .filter { word:String => word.length > 3 &&
                 Character.isUpperCase(word.charAt(0)) &&
                 !STOPWORDS.contains(word.toLowerCase) }.toSeq
 

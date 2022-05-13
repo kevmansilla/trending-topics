@@ -28,8 +28,8 @@ class NERModel {
     "hi", "hello"
   )
 
-  val punctuationSymbols = ".,()!?;:'`\n"
-  val punctuationRegex = "\\" + punctuationSymbols.split(" ").mkString("|\\")
+  val punctuationSymbols = ".,()!?;:'`\n"+ "’”*/&#-"
+  val punctuationRegex = "\\" + punctuationSymbols.split("").mkString("|\\")
 
   // This is the model that extracts the Named Entities from a single text
   def getNEsSingle(text: String): Seq[String] =

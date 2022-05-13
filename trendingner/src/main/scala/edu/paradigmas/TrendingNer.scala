@@ -40,7 +40,7 @@ object TrendingNer extends App {
   println("---------------------------\n")
 
   val INIT_INDEX = 0
-  val MAX_FEEDS = 50
+  val MAX_FEEDS = 20
   sortedNEs.slice(INIT_INDEX, MAX_FEEDS).foreach {
     case (namedEntity, count) => {
       println(s"- $namedEntity: $count")

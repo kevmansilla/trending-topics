@@ -1,4 +1,6 @@
 package edu.paradigmas
+import scala.io.Source
+import scala.util.{Try,Success,Failure}
 
 case class Subscription(
   url: String,
@@ -32,7 +34,10 @@ class ProcessSubscription {
 
   def getContent(subscriptions: Seq[CorrectSubscription]): Seq[String] = {
     subscriptions.flatMap { post =>
-      post.request.parserRequest(post.url)
+      post.request.parserRequest(post.url) match {
+        case Success(x) => x
+        case Failure(e) => List()
+      }
     }
   }
 
